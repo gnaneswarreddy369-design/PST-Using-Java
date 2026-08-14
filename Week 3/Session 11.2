@@ -1,0 +1,51 @@
+class Solution {
+    public int daysBetweenDates(String date1, String date2) {
+        return Math.abs(daysFromBase(date1) - daysFromBase(date2));
+    }
+
+    private int daysFromBase(String date) {
+        String[] parts = date.split("-");
+        int y = Integer.parseInt(parts[0]);
+        int m = Integer.parseInt(parts[1]);
+        int d = Integer.parseInt(parts[2]);
+
+        int[] daysInMonths = {0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+        int days = 0;
+
+        // Sum days for all preceding years starting from 1900
+        for (int year = 1900; year < y; year++) {
+            days += isLeap(year) ? 366 : 365;
+        }
+
+        // Sum days for preceding months in the target year
+        for (int month = 1; month < m; month++) {
+            if (month == 2 && isLeap(y)) {
+                days += 29;
+            } else {
+                days += daysInMonths[month];
+            }
+        }
+
+        // Add remaining days of current month
+        days += d;
+        return days;
+    }
+
+    private boolean isLeap(int year) {
+        return (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0);
+    }
+}
+
+
+
+Case 1
+Case 2
+Input
+date1 =
+"2019-06-29"
+date2 =
+"2019-06-30"
+Output
+1
+Expected
+1
