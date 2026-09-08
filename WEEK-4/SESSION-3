@@ -1,0 +1,623 @@
+import java.util.*;
+
+public class CompetitivePatterns {
+
+    // =========================================================
+    // 1. TWO POINTERS
+    // =========================================================
+    static void twoPointers(int[] arr, int target) {
+
+        int left = 0;
+        int right = arr.length - 1;
+
+        while (left < right) {
+
+            int sum = arr[left] + arr[right];
+
+            if (sum == target) {
+                System.out.println(
+                    "Pair found: " + arr[left] + " + " + arr[right]
+                );
+                return;
+            }
+
+            if (sum < target)
+                left++;
+            else
+                right--;
+        }
+
+        System.out.println("Pair not found");
+    }
+
+
+    // =========================================================
+    // 2. SLIDING WINDOW
+    // Find maximum sum of subarray of size k
+    // =========================================================
+    static int slidingWindow(int[] arr, int k) {
+
+        int windowSum = 0;
+
+        for (int i = 0; i < k; i++) {
+            windowSum += arr[i];
+        }
+
+        int maxSum = windowSum;
+
+        for (int i = k; i < arr.length; i++) {
+
+            windowSum += arr[i];
+            windowSum -= arr[i - k];
+
+            maxSum = Math.max(maxSum, windowSum);
+        }
+
+        return maxSum;
+    }
+
+
+    // =========================================================
+    // 3. PREFIX SUM
+    // =========================================================
+    static int[] prefixSum(int[] arr) {
+
+        int[] prefix = new int[arr.length + 1];
+
+        for (int i = 0; i < arr.length; i++) {
+            prefix[i + 1] = prefix[i] + arr[i];
+        }
+
+        return prefix;
+    }
+
+
+    // =========================================================
+    // 4. BINARY SEARCH
+    // =========================================================
+    static int binarySearch(int[] arr, int target) {
+
+        int left = 0;
+        int right = arr.length - 1;
+
+        while (left <= right) {
+
+            int mid = left + (right - left) / 2;
+
+            if (arr[mid] == target)
+                return mid;
+
+            if (arr[mid] < target)
+                left = mid + 1;
+            else
+                right = mid - 1;
+        }
+
+        return -1;
+    }
+
+
+    // =========================================================
+    // 5. FREQUENCY USING HASHMAP
+    // =========================================================
+    static void frequency(int[] arr) {
+
+        HashMap<Integer, Integer> map = new HashMap<>();
+
+        for (int x : arr) {
+            map.put(x, map.getOrDefault(x, 0) + 1);
+        }
+
+        System.out.println("Frequency:");
+
+        for (Map.Entry<Integer, Integer> entry : map.entrySet()) {
+            System.out.println(
+                entry.getKey() + " -> " + entry.getValue()
+            );
+        }
+    }
+
+
+    // =========================================================
+    // 6. MONOTONIC STACK
+    // Next Greater Element
+    // =========================================================
+    static void nextGreaterElement(int[] arr) {
+
+        int n = arr.length;
+
+        int[] result = new int[n];
+
+        Arrays.fill(result, -1);
+
+        Stack<Integer> stack = new Stack<>();
+
+        for (int i = 0; i < n; i++) {
+
+            while (!stack.isEmpty() &&
+                   arr[stack.peek()] < arr[i]) {
+
+                result[stack.pop()] = arr[i];
+            }
+
+            stack.push(i);
+        }
+
+        System.out.println("Next Greater Elements:");
+
+        for (int x : result) {
+            System.out.print(x + " ");
+        }
+
+        System.out.println();
+    }
+
+
+    // =========================================================
+    // 7. DFS
+    // =========================================================
+    static void dfs(
+            int node,
+            ArrayList<Integer>[] graph,
+            boolean[] visited) {
+
+        visited[node] = true;
+
+        System.out.print(node + " ");
+
+        for (int next : graph[node]) {
+
+            if (!visited[next]) {
+                dfs(next, graph, visited);
+            }
+        }
+    }
+
+
+    // =========================================================
+    // 8. BFS
+    // =========================================================
+    static void bfs(
+            int start,
+            ArrayList<Integer>[] graph) {
+
+        boolean[] visited = new boolean[graph.length];
+
+        Queue<Integer> queue = new LinkedList<>();
+
+        queue.offer(start);
+
+        visited[start] = true;
+
+        while (!queue.isEmpty()) {
+
+            int node = queue.poll();
+
+            System.out.print(node + " ");
+
+            for (int next : graph[node]) {
+
+                if (!visited[next]) {
+
+                    visited[next] = true;
+
+                    queue.offer(next);
+                }
+            }
+        }
+
+        System.out.println();
+    }
+
+
+    // =========================================================
+    // 9. HEAP / PRIORITY QUEUE
+    // =========================================================
+    static void priorityQueueExample() {
+
+        PriorityQueue<Integer> minHeap =
+                new PriorityQueue<>();
+
+        minHeap.offer(30);
+        minHeap.offer(10);
+        minHeap.offer(20);
+        minHeap.offer(5);
+
+        System.out.println("Min Heap:");
+
+        while (!minHeap.isEmpty()) {
+            System.out.print(minHeap.poll() + " ");
+        }
+
+        System.out.println();
+    }
+
+
+    // =========================================================
+    // 10. BACKTRACKING
+    // Generate all subsets
+    // =========================================================
+    static void subsets(
+            int index,
+            int[] arr,
+            ArrayList<Integer> current) {
+
+        if (index == arr.length) {
+
+            System.out.println(current);
+
+            return;
+        }
+
+
+        // Don't take current element
+        subsets(index + 1, arr, current);
+
+
+        // Take current element
+        current.add(arr[index]);
+
+        subsets(index + 1, arr, current);
+
+        current.remove(current.size() - 1);
+    }
+
+
+    // =========================================================
+    // 11. DYNAMIC PROGRAMMING
+    // Fibonacci using DP
+    // =========================================================
+    static int fibonacci(int n) {
+
+        if (n <= 1)
+            return n;
+
+        int[] dp = new int[n + 1];
+
+        dp[0] = 0;
+        dp[1] = 1;
+
+        for (int i = 2; i <= n; i++) {
+
+            dp[i] = dp[i - 1] + dp[i - 2];
+        }
+
+        return dp[n];
+    }
+
+
+    // =========================================================
+    // 12. UNION FIND / DSU
+    // =========================================================
+    static class DSU {
+
+        int[] parent;
+        int[] size;
+
+
+        DSU(int n) {
+
+            parent = new int[n];
+            size = new int[n];
+
+            for (int i = 0; i < n; i++) {
+
+                parent[i] = i;
+                size[i] = 1;
+            }
+        }
+
+
+        int find(int x) {
+
+            if (parent[x] != x) {
+
+                parent[x] = find(parent[x]);
+            }
+
+            return parent[x];
+        }
+
+
+        boolean union(int a, int b) {
+
+            a = find(a);
+            b = find(b);
+
+            if (a == b)
+                return false;
+
+
+            if (size[a] < size[b]) {
+
+                int temp = a;
+                a = b;
+                b = temp;
+            }
+
+
+            parent[b] = a;
+
+            size[a] += size[b];
+
+            return true;
+        }
+    }
+
+
+    // =========================================================
+    // 13. MAIN METHOD
+    // =========================================================
+    public static void main(String[] args) {
+
+        Scanner sc = new Scanner(System.in);
+
+
+        // -----------------------------------------------------
+        // ARRAY
+        // -----------------------------------------------------
+
+        int[] arr = {
+            1, 2, 3, 4, 5, 6
+        };
+
+
+        // -----------------------------------------------------
+        // TWO POINTERS
+        // -----------------------------------------------------
+
+        System.out.println("1. TWO POINTERS");
+
+        twoPointers(arr, 9);
+
+
+        // -----------------------------------------------------
+        // SLIDING WINDOW
+        // -----------------------------------------------------
+
+        System.out.println("\n2. SLIDING WINDOW");
+
+        int max = slidingWindow(arr, 3);
+
+        System.out.println(
+            "Maximum sum of size 3 = " + max
+        );
+
+
+        // -----------------------------------------------------
+        // PREFIX SUM
+        // -----------------------------------------------------
+
+        System.out.println("\n3. PREFIX SUM");
+
+        int[] prefix = prefixSum(arr);
+
+        System.out.println(
+            "Prefix Array = " + Arrays.toString(prefix)
+        );
+
+
+        // Range sum from index 1 to 4
+
+        int l = 1;
+        int r = 4;
+
+        int rangeSum =
+                prefix[r + 1] - prefix[l];
+
+        System.out.println(
+            "Range Sum = " + rangeSum
+        );
+
+
+        // -----------------------------------------------------
+        // BINARY SEARCH
+        // -----------------------------------------------------
+
+        System.out.println("\n4. BINARY SEARCH");
+
+        int target = 4;
+
+        int index =
+                binarySearch(arr, target);
+
+        System.out.println(
+            "Index of " + target + " = " + index
+        );
+
+
+        // -----------------------------------------------------
+        // HASHMAP
+        // -----------------------------------------------------
+
+        System.out.println("\n5. HASHMAP");
+
+        int[] nums = {
+            1, 2, 2, 3, 3, 3, 4
+        };
+
+        frequency(nums);
+
+
+        // -----------------------------------------------------
+        // MONOTONIC STACK
+        // -----------------------------------------------------
+
+        System.out.println("\n6. MONOTONIC STACK");
+
+        int[] nge = {
+            4, 5, 2, 10, 8
+        };
+
+        nextGreaterElement(nge);
+
+
+        // -----------------------------------------------------
+        // GRAPH
+        // -----------------------------------------------------
+
+        System.out.println("\n7. DFS / BFS");
+
+        int n = 5;
+
+        ArrayList<Integer>[] graph =
+                new ArrayList[n];
+
+        for (int i = 0; i < n; i++) {
+            graph[i] = new ArrayList<>();
+        }
+
+
+        // Edges
+
+        graph[0].add(1);
+        graph[1].add(0);
+
+        graph[0].add(2);
+        graph[2].add(0);
+
+        graph[1].add(3);
+        graph[3].add(1);
+
+        graph[2].add(4);
+        graph[4].add(2);
+
+
+        System.out.print("DFS: ");
+
+        boolean[] visited =
+                new boolean[n];
+
+        dfs(0, graph, visited);
+
+        System.out.println();
+
+
+        System.out.print("BFS: ");
+
+        bfs(0, graph);
+
+
+        // -----------------------------------------------------
+        // PRIORITY QUEUE
+        // -----------------------------------------------------
+
+        System.out.println("\n8. PRIORITY QUEUE");
+
+        priorityQueueExample();
+
+
+        // -----------------------------------------------------
+        // BACKTRACKING
+        // -----------------------------------------------------
+
+        System.out.println("\n9. BACKTRACKING");
+
+        int[] subsetArray = {
+            1, 2, 3
+        };
+
+        subsets(
+            0,
+            subsetArray,
+            new ArrayList<>()
+        );
+
+
+        // -----------------------------------------------------
+        // DYNAMIC PROGRAMMING
+        // -----------------------------------------------------
+
+        System.out.println("\n10. DYNAMIC PROGRAMMING");
+
+        int number = 10;
+
+        System.out.println(
+            "Fibonacci(" + number + ") = "
+            + fibonacci(number)
+        );
+
+
+        // -----------------------------------------------------
+        // DSU
+        // -----------------------------------------------------
+
+        System.out.println("\n11. UNION FIND / DSU");
+
+        DSU dsu = new DSU(5);
+
+        dsu.union(0, 1);
+        dsu.union(1, 2);
+
+        System.out.println(
+            "Are 0 and 2 connected? "
+            + (dsu.find(0) == dsu.find(2))
+        );
+
+        System.out.println(
+            "Are 0 and 4 connected? "
+            + (dsu.find(0) == dsu.find(4))
+        );
+
+
+        sc.close();
+    }
+}
+
+OUTPUT:
+/tmp/jM57ZLAeM6/Main.java:464: warning: [unchecked] unchecked conversion
+                new ArrayList[n];
+                ^
+  required: ArrayList<Integer>[]
+  found:    ArrayList[]
+1 warning
+1. TWO POINTERS
+Pair found: 3 + 6
+
+2. SLIDING WINDOW
+Maximum sum of size 3 = 15
+
+3. PREFIX SUM
+Prefix Array = [0, 1, 3, 6, 10, 15, 21]
+Range Sum = 14
+
+4. BINARY SEARCH
+Index of 4 = 3
+
+5. HASHMAP
+Frequency:
+1 -> 1
+2 -> 2
+3 -> 3
+4 -> 1
+
+6. MONOTONIC STACK
+Next Greater Elements:
+5 10 10 -1 -1 
+
+7. DFS / BFS
+DFS: 0 1 3 2 4 
+BFS: 0 1 2 3 4 
+
+8. PRIORITY QUEUE
+Min Heap:
+5 10 20 30 
+
+9. BACKTRACKING
+[]
+[3]
+[2]
+[2, 3]
+[1]
+[1, 3]
+[1, 2]
+[1, 2, 3]
+
+10. DYNAMIC PROGRAMMING
+Fibonacci(10) = 55
+
+11. UNION FIND / DSU
+Are 0 and 2 connected? true
+Are 0 and 4 connected? false
+
+=== Code Execution Successful ===
