@@ -1,0 +1,203 @@
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Objects;
+import java.util.concurrent.locks.ReentrantLock;
+
+// Custom Runtime Exceptions for domain constraint failures
+class InsufficientBalanceException extends RuntimeException {
+    public InsufficientBalanceException(String message) {
+        super(message);
+    }
+}
+
+class InvalidTransactionException extends RuntimeException {
+    public InvalidTransactionException(String message) {
+        super(message);
+    }
+}
+
+// Constraint: Immutable Audit Record
+enum TransactionType { DEPOSIT, WITHDRAWAL, TRANSFER_OUT, TRANSFER_IN }
+
+final class TransactionRecord {
+    private final String transactionId;
+    private final TransactionType type;
+    private final BigDecimal amount;
+    private final BigDecimal postBalance;
+    private final LocalDateTime timestamp;
+
+    public TransactionRecord(String transactionId, TransactionType type, BigDecimal amount, BigDecimal postBalance) {
+        this.transactionId = transactionId;
+        this.type = type;
+        this.amount = amount;
+        this.postBalance = postBalance;
+        this.timestamp = LocalDateTime.now();
+    }
+
+    @Override
+    public String toString() {
+        return String.format("[%s] ID: %s | Type: %-12s | Amount: $%8.2f | Balance: $%8.2f",
+                timestamp, transactionId, type, amount, postBalance);
+    }
+}
+
+// Thread-safe Bank Account violating no financial invariants
+class BankAccount {
+    private final String accountNumber;
+    private final String accountHolder;
+    private BigDecimal balance;
+    private final List<TransactionRecord> history = new ArrayList<>();
+    
+    // Concurrency Constraint Lock
+    private final ReentrantLock lock = new ReentrantLock();
+
+    public BankAccount(String accountNumber, String accountHolder, BigDecimal initialDeposit) {
+        validateAmount(initialDeposit);
+        this.accountNumber = Objects.requireNonNull(accountNumber, "Account number cannot be null");
+        this.accountHolder = Objects.requireNonNull(accountHolder, "Account holder cannot be null");
+        this.balance = initialDeposit;
+        
+        recordTransaction(TransactionType.DEPOSIT, initialDeposit);
+    }
+
+    public String getAccountNumber() { return accountNumber; }
+    public String getAccountHolder() { return accountHolder; }
+
+    public BigDecimal getBalance() {
+        lock.lock();
+        try {
+            return balance;
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    // Unmodifiable view to preserve history integrity
+    public List<TransactionRecord> getHistory() {
+        lock.lock();
+        try {
+            return Collections.unmodifiableList(new ArrayList<>(history));
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    // Constraint: Deposit Operation
+    public void deposit(BigDecimal amount) {
+        validateAmount(amount);
+        lock.lock();
+        try {
+            this.balance = this.balance.add(amount);
+            recordTransaction(TransactionType.DEPOSIT, amount);
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    // Constraint: Withdrawal Operation
+    public void withdraw(BigDecimal amount) {
+        validateAmount(amount);
+        lock.lock();
+        try {
+            if (balance.compareTo(amount) < 0) {
+                throw new InsufficientBalanceException(
+                    "Withdrawal failed: Requested $" + amount + " but available balance is $" + balance
+                );
+            }
+            this.balance = this.balance.subtract(amount);
+            recordTransaction(TransactionType.WITHDRAWAL, amount);
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    // Constraint: Deadlock-free Transfer between Accounts
+    public void transfer(BankAccount targetAccount, BigDecimal amount) {
+        Objects.requireNonNull(targetAccount, "Target account cannot be null");
+        if (this.accountNumber.equals(targetAccount.accountNumber)) {
+            throw new InvalidTransactionException("Cannot transfer funds to the same account.");
+        }
+        validateAmount(amount);
+
+        // Deadlock prevention: Lock accounts in a fixed global order based on account numbers
+        BankAccount firstLock = this.accountNumber.compareTo(targetAccount.accountNumber) < 0 ? this : targetAccount;
+        BankAccount secondLock = this.accountNumber.compareTo(targetAccount.accountNumber) < 0 ? targetAccount : this;
+
+        firstLock.lock.lock();
+        secondLock.lock.lock();
+        try {
+            if (this.balance.compareTo(amount) < 0) {
+                throw new InsufficientBalanceException(
+                    "Transfer failed: Available balance is $" + this.balance + " for requested transfer of $" + amount
+                );
+            }
+            
+            // Execute state update atomically across accounts
+            this.balance = this.balance.subtract(amount);
+            this.recordTransaction(TransactionType.TRANSFER_OUT, amount);
+
+            targetAccount.balance = targetAccount.balance.add(amount);
+            targetAccount.recordTransaction(TransactionType.TRANSFER_IN, amount);
+
+        } finally {
+            secondLock.lock.unlock();
+            firstLock.lock.unlock();
+        }
+    }
+
+    private void validateAmount(BigDecimal amount) {
+        if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new InvalidTransactionException("Transaction amount must be strictly greater than zero.");
+        }
+    }
+
+    private void recordTransaction(TransactionType type, BigDecimal amount) {
+        String txId = "TXN-" + System.currentTimeMillis() + "-" + (int)(Math.random() * 1000);
+        history.add(new TransactionRecord(txId, type, amount, this.balance));
+    }
+}
+
+public class Main {
+    public static void main(String[] args) {
+        BankAccount alice = new BankAccount("ACC101", "Alice", new BigDecimal("1000.00"));
+        BankAccount bob = new BankAccount("ACC102", "Bob", new BigDecimal("500.00"));
+
+        alice.deposit(new BigDecimal("250.00"));
+
+        try {
+            alice.withdraw(new BigDecimal("200.00"));
+            alice.transfer(bob, new BigDecimal("400.00"));
+
+            // Overdraft attempt (triggers exception)
+            alice.withdraw(new BigDecimal("1000.00"));
+        } catch (RuntimeException e) {
+            System.err.println("Transaction Error: " + e.getMessage());
+        }
+
+        // Print Transaction Log (Fixed Syntax using double colon ::)
+        System.out.println("\n--- Alice Statement ---");
+        alice.getHistory().forEach(System.out::println);
+
+        System.out.println("\n--- Bob Statement ---");
+        bob.getHistory().forEach(System.out::println);
+    }
+}
+
+OUTPUT:
+ERROR!
+Transaction Error: Withdrawal failed: Requested $1000.00 but available balance is $650.00
+
+--- Alice Statement ---
+[2026-09-08T03:51:56.311813564] ID: TXN-1788839516217-224 | Type: DEPOSIT      | Amount: $ 1000.00 | Balance: $ 1000.00
+[2026-09-08T03:51:56.311992694] ID: TXN-1788839516311-211 | Type: DEPOSIT      | Amount: $  250.00 | Balance: $ 1250.00
+[2026-09-08T03:51:56.312067074] ID: TXN-1788839516312-248 | Type: WITHDRAWAL   | Amount: $  200.00 | Balance: $ 1050.00
+[2026-09-08T03:51:56.312111274] ID: TXN-1788839516312-629 | Type: TRANSFER_OUT | Amount: $  400.00 | Balance: $  650.00
+
+--- Bob Statement ---
+[2026-09-08T03:51:56.311932874] ID: TXN-1788839516311-122 | Type: DEPOSIT      | Amount: $  500.00 | Balance: $  500.00
+[2026-09-08T03:51:56.312133154] ID: TXN-1788839516312-956 | Type: TRANSFER_IN  | Amount: $  400.00 | Balance: $  900.00
+
+=== Code Execution Successful ===
