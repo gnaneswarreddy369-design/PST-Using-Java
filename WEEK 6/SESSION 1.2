@@ -1,0 +1,72 @@
+public class Solution {
+
+    /**
+     * Approach 1: String Concatenation Trick (Optimal & Concise)
+     * Time Complexity: O(N)
+     * Space Complexity: O(N)
+     */
+    public boolean repeatedSubstringPattern(String s) {
+        String doubled = s + s;
+        // Search inside doubled excluding the first and last characters
+        return doubled.substring(1, doubled.length() - 1).contains(s);
+    }
+
+    /**
+     * Approach 2: KMP Prefix Table (Memory Efficient)
+     * Time Complexity: O(N)
+     * Space Complexity: O(N)
+     */
+    public boolean repeatedSubstringPatternKMP(String s) {
+        int n = s.length();
+        int[] lps = new int[n];
+        
+        int len = 0;
+        int i = 1;
+        
+        // Build KMP LPS (Longest Prefix Suffix) array
+        while (i < n) {
+            if (s.charAt(i) == s.charAt(len)) {
+                len++;
+                lps[i] = len;
+                i++;
+            } else {
+                if (len != 0) {
+                    len = lps[len - 1];
+                } else {
+                    lps[i] = 0;
+                    i++;
+                }
+            }
+        }
+        
+        int lastLps = lps[n - 1];
+        // Check if the longest proper prefix that is also a suffix divides the string length
+        return lastLps > 0 && n % (n - lastLps) == 0;
+    }
+
+    // Main method to test both solutions
+    public static void main(String[] args) {
+        Solution sol = new Solution();
+
+        String test1 = "abab";
+        String test2 = "aba";
+        String test3 = "abcabcabcabc";
+
+        System.out.println("Test 1 ('abab'): " + sol.repeatedSubstringPattern(test1)); // Expected: true
+        System.out.println("Test 2 ('aba'): " + sol.repeatedSubstringPattern(test2));  // Expected: false
+        System.out.println("Test 3 ('abcabcabcabc'): " + sol.repeatedSubstringPattern(test3)); // Expected: true
+    }
+}
+
+OUTPUT:
+Case 1
+Case 2
+Case 3
+Input
+s =
+"abab"
+Output
+true
+Expected
+true
+
