@@ -1,0 +1,76 @@
+import java.io.*;
+import java.math.*;
+import java.security.*;
+import java.text.*;
+import java.util.*;
+import java.util.concurrent.*;
+import java.util.regex.*;
+
+class Result {
+
+    /*
+     * Complete the 'stringSimilarity' function below.
+     *
+     * The function is expected to return a LONG integer.
+     * The function accepts STRING s as parameter.
+     */
+
+    public static long stringSimilarity(String s) {
+        int n = s.length();
+        if (n == 0) return 0;
+
+        int[] z = new int[n];
+        int l = 0, r = 0;
+        long totalSimilarity = n; // The full string's similarity with itself is n
+
+        for (int i = 1; i < n; i++) {
+            if (i <= r) {
+                z[i] = Math.min(r - i + 1, z[i - l]);
+            }
+            while (i + z[i] < n && s.charAt(z[i]) == s.charAt(i + z[i])) {
+                z[i]++;
+            }
+            if (i + z[i] - 1 > r) {
+                l = i;
+                r = i + z[i] - 1;
+            }
+            totalSimilarity += z[i];
+        }
+
+        return totalSimilarity;
+    }
+
+}
+
+public class Solution {
+    public static void main(String[] args) throws IOException {
+        BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(System.in));
+        BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(System.getenv("OUTPUT_PATH")));
+
+        int t = Integer.parseInt(bufferedReader.readLine().trim());
+
+        for (int tItr = 0; tItr < t; tItr++) {
+            String s = bufferedReader.readLine();
+
+            long result = Result.stringSimilarity(s);
+
+            bufferedWriter.write(String.valueOf(result));
+            bufferedWriter.newLine();
+        }
+
+        bufferedReader.close();
+        bufferedWriter.close();
+    }
+}
+
+OUTPUT:
+Input (stdin)
+2
+ababaa
+aa
+Your Output (stdout)
+11
+3
+Expected Output
+11
+3
