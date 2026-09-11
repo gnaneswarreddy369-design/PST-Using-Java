@@ -1,0 +1,211 @@
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
+public class JavaEfficiencyExamples {
+
+    public static void main(String[] args) {
+        System.out.println("=== 1. String Concatenation ===");
+        runStringConcatenationExample();
+
+        System.out.println("\n=== 2. Pre-sizing Collections & Fast Lookups ===");
+        runCollectionOptimizationExample();
+
+        System.out.println("\n=== 3. Avoiding Autoboxing Overhead ===");
+        runPrimitiveVsWrapperExample();
+
+        System.out.println("\n=== 4. Hotspot Loop Optimization ===");
+        runLoopOptimizationExample();
+
+        System.out.println("\n=== 5. Buffered File I/O ===");
+        runBufferedIOExample();
+    }
+
+    /**
+     * 1. STRING CONCATENATION
+     * Use StringBuilder with pre-allocated capacity instead of '+' in loops
+     * to avoid creating thousands of short-lived temporary String objects.
+     */
+    private static void runStringConcatenationExample() {
+        int iterations = 10_000;
+
+        // ✅ Efficient Approach
+        long startTime = System.nanoTime();
+        StringBuilder sb = new StringBuilder(iterations * 5); // Pre-allocate buffer
+        for (int i = 0; i < iterations; i++) {
+            sb.append(i);
+        }
+        String result = sb.toString();
+        long duration = System.nanoTime() - startTime;
+
+        System.out.println("StringBuilder time: " + (duration / 1_000_000.0) + " ms");
+        System.out.println("Result length: " + result.length());
+    }
+
+    /**
+     * 2. PRE-SIZING COLLECTIONS & FAST LOOKUPS
+     * Pre-size ArrayLists to prevent dynamic array copying.
+     * Use HashSet for O(1) membership checks instead of O(N) List lookups.
+     */
+    private static void runCollectionOptimizationExample() {
+        int size = 1_000_000;
+
+        // ✅ Efficient Pre-sized List
+        List<Integer> numbers = new ArrayList<>(size);
+        for (int i = 0; i < size; i++) {
+            numbers.add(i);
+        }
+
+        // ✅ Efficient O(1) Lookup with HashSet
+        Set<Integer> numberSet = new HashSet<>(numbers);
+
+        long startTime = System.nanoTime();
+        boolean exists = numberSet.contains(999_999); // O(1) time
+        long duration = System.nanoTime() - startTime;
+
+        System.out.println("HashSet O(1) lookup time: " + duration + " ns (found: " + exists + ")");
+    }
+
+    /**
+     * 3. PRIMITIVES VS. WRAPPER TYPES (AUTOBOXING)
+     * Use primitive types ('long', 'int') in tight loops to prevent heap allocation
+     * and automatic boxing/unboxing overhead.
+     */
+    private static void runPrimitiveVsWrapperExample() {
+        int iterations = 10_000_000;
+
+        // ✅ Efficient Primitive Usage
+        long startTime = System.nanoTime();
+        long sum = 0L;
+        for (long i = 0; i < iterations; i++) {
+            sum += i; // No object allocation or unboxing
+        }
+        long duration = System.nanoTime() - startTime;
+
+        System.out.println("Primitive calculation time: " + (duration / 1_000_000.0) + " ms (Sum: " + sum + ")");
+    }
+
+    /**
+     * 4. HOTSPOT LOOP OPTIMIZATION
+     * Use traditional indexed loops and bitwise operations in core hotspots
+     * to eliminate functional stream call stack overhead and maximize JIT optimization.
+     */
+    private static void runLoopOptimizationExample() {
+        int size = 1_000_000;
+        List<Integer> list = new ArrayList<>(size);
+        for (int i = 0; i < size; i++) {
+            list.add(i);
+        }
+
+        long startTime = System.nanoTime();
+        List<Integer> processedEvens = new ArrayList<>(size / 2);
+
+        // Standard indexed loop using bitwise operations
+        for (int i = 0; i < list.size(); i++) {
+            int val = list.get(i);
+            if ((val & 1) == 0) {    // Bitwise check for even (val % 2 == 0)
+                processedEvens.add(val << 1); // Bitwise shift for multiplication by 2 (val * 2)
+            }
+        }
+        long duration = System.nanoTime() - startTime;
+
+        System.out.println("Optimized loop execution time: " + (duration / 1_000_000.0) + " ms");
+    }
+
+    /**
+     * 5. EFFICIENT FILE I/O
+     * Use BufferedReader / BufferedWriter with try-with-resources to minimize disk accesses
+     * and automatically close resources without memory leaks.
+     */
+    private static void runBufferedIOExample() {
+        String filename = "temp_performance_test.txt";
+
+        // Write sample data efficiently using BufferedWriter
+        try (BufferedWriter writer = Files.newBufferedWriter(Paths.get(filename))) {
+            for (int i = 0; i < 1000; i++) {
+                writer.write("Sample performance log line #" + i);
+                writer.newLine();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        // Read sample data efficiently using BufferedReader
+        int lineCount = 0;
+        try (BufferedReader reader = Files.newBufferedReader(Paths.get(filename))) {
+            while (reader.readLine() != null) {
+                lineCount++;
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            // Cleanup sample file
+            try {
+                Files.deleteIfExists(Paths.get(filename));
+            } catch (IOException ignored) {}
+        }
+
+        System.out.println("Successfully processed " + lineCount + " lines via buffered I/O.");
+    }
+}
+
+OUTPUT:
+=== 1. String Concatenation ===
+StringBuilder time: 1.05066 ms
+Result length: 38890
+
+=== 2. Pre-sizing Collections & Fast Lookups ===
+HashSet O(1) lookup time: 65130 ns (found: true)
+
+=== 3. Avoiding Autoboxing Overhead ===
+Primitive calculation time: 14.543539 ms (Sum: 49999995000000)
+
+=== 4. Hotspot Loop Optimization ===
+Optimized loop execution time: 101.704474 ms
+
+=== 5. Buffered File I/O ===
+java.nio.file.AccessDeniedException: temp_performance_test.txt
+ERROR!
+	at java.base/sun.nio.fs.UnixException.translateToIOException(UnixException.java:90)
+	at java.base/sun.nio.fs.UnixException.rethrowAsIOException(UnixException.java:106)
+	at java.base/sun.nio.fs.UnixException.rethrowAsIOException(UnixException.java:111)
+	at java.base/sun.nio.fs.UnixFileSystemProvider.newByteChannel(UnixFileSystemProvider.java:261)
+	at java.base/java.nio.file.spi.FileSystemProvider.newOutputStream(FileSystemProvider.java:482)
+	at java.base/java.nio.file.Files.newOutputStream(Files.java:228)
+	at java.base/java.nio.file.Files.newBufferedWriter(Files.java:3001)
+	at java.base/java.nio.file.Files.newBufferedWriter(Files.java:3049)
+	at JavaEfficiencyExamples.runBufferedIOExample(Main.java:130)
+	at JavaEfficiencyExamples.main(Main.java:27)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at jdk.compiler/com.sun.tools.javac.launcher.Main.execute(Main.java:484)
+	at jdk.compiler/com.sun.tools.javac.launcher.Main.run(Main.java:208)
+	at jdk.compiler/com.sun.tools.javac.launcher.Main.main(Main.java:135)
+java.nio.file.NoSuchFileException: temp_performance_test.txt
+	at java.base/sun.nio.fs.UnixException.translateToIOException(UnixException.java:92)
+	at java.base/sun.nio.fs.UnixException.rethrowAsIOException(UnixException.java:106)
+	at java.base/sun.nio.fs.UnixException.rethrowAsIOException(UnixException.java:111)
+	at java.base/sun.nio.fs.UnixFileSystemProvider.newByteChannel(UnixFileSystemProvider.java:261)
+	at java.base/java.nio.file.Files.newByteChannel(Files.java:380)
+	at java.base/java.nio.file.Files.newByteChannel(Files.java:432)
+	at java.base/java.nio.file.spi.FileSystemProvider.newInputStream(FileSystemProvider.java:420)
+	at java.base/java.nio.file.Files.newInputStream(Files.java:160)
+	at java.base/java.nio.file.Files.newBufferedReader(Files.java:2910)
+	at java.base/java.nio.file.Files.newBufferedReader(Files.java:2943)
+	at JavaEfficiencyExamples.runBufferedIOExample(Main.java:141)
+ERROR!
+	at JavaEfficiencyExamples.main(Main.java:27)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at jdk.compiler/com.sun.tools.javac.launcher.Main.execute(Main.java:484)
+	at jdk.compiler/com.sun.tools.javac.launcher.Main.run(Main.java:208)
+	at jdk.compiler/com.sun.tools.javac.launcher.Main.main(Main.java:135)
+Successfully processed 0 lines via buffered I/O.
+
+=== Code Execution Successful ===
