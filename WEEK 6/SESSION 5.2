@@ -1,0 +1,380 @@
+import java.io.*;
+import java.util.*;
+
+public class Solution {
+
+    static int n;
+    static int size;
+    static int[] tree;
+    static int[] radius;
+
+    // Manacher's Algorithm
+    
+    static void manacher(String str) {
+        int len = str.length();
+
+        char[] p = new char[2 * len + 1];
+
+        for (int i = 0; i < len; i++) {
+            p[2 * i] = '#';
+            p[2 * i + 1] = str.charAt(i);
+        }
+        p[2 * len] = '#';
+
+        radius = new int[2 * len + 1];
+
+        int R = 0;
+        int Ri = 0;
+
+        for (int i = 1; i <= 2 * len; i++) {
+
+            if (i >= R) {
+
+                if (p[i] != '#')
+                    radius[i] = 1;
+                else
+                    radius[i] = 0;
+
+                int j;
+
+                for (j = i + 1; j <= 2 * len; j++) {
+
+                    if (2 * i - j >= 0 && p[j] == p[2 * i - j]) {
+
+                        if (p[j] != '#')
+                            radius[i] += 2;
+
+                    } else {
+                        Ri = i;
+                        R = j - 1;
+                        break;
+                    }
+                }
+
+            } else {
+
+                int mirror = 2 * Ri - i;
+
+                if (i + radius[mirror] >= R || mirror == radius[mirror]) {
+
+                    radius[i] = R - i;
+
+                    int j;
+
+                    for (j = R + 1; j <= 2 * len; j++) {
+
+                        if (2 * i - j >= 0 &&
+                            p[j] == p[2 * i - j]) {
+
+                            if (p[j] != '#')
+                                radius[i] += 2;
+
+                        } else {
+                            Ri = i;
+                            R = j - 1;
+                            break;
+                        }
+                    }
+
+                } else {
+                    radius[i] = radius[mirror];
+                }
+            }
+        }
+    }
+
+    // ------------------------------------------------------------
+    // Segment Tree
+    // Range Maximum Update + Point Query
+    // ------------------------------------------------------------
+    static void initTree(int n) {
+
+        size = 1;
+
+        while (size < n)
+            size <<= 1;
+
+        tree = new int[2 * size];
+    }
+
+    static void rangeUpdate(int left, int right, int value) {
+
+        if (left > right)
+            return;
+
+        left += size;
+        right += size;
+
+        while (left <= right) {
+
+            if ((left & 1) == 1) {
+                tree[left] = Math.max(tree[left], value);
+                left++;
+            }
+
+            if ((right & 1) == 0) {
+                tree[right] = Math.max(tree[right], value);
+                right--;
+            }
+
+            left >>= 1;
+            right >>= 1;
+        }
+    }
+
+    static int query(int index) {
+
+        int result = 0;
+
+        int pos = index + size;
+
+        while (pos > 0) {
+            result = Math.max(result, tree[pos]);
+            pos >>= 1;
+        }
+
+        return result;
+    }
+
+    // ------------------------------------------------------------
+    // Update palindrome interval
+    // ------------------------------------------------------------
+    static void update(int x, int y, int z) {
+
+        /*
+         * If palindrome is longer than n, only n characters
+         * can belong to one rotation.
+         */
+        if (z > n) {
+
+            int m = x + z / 2;
+
+            if ((z & 1) == 1) {
+
+                if ((n & 1) == 1) {
+                    update(
+                        m - n / 2,
+                        m + n / 2,
+                        n
+                    );
+                } else {
+                    update(
+                        m - n / 2 + 1,
+                        m + n / 2 - 1,
+                        n - 1
+                    );
+                }
+
+            } else {
+
+                if ((n & 1) == 1) {
+                    update(
+                        m - n / 2,
+                        m + n / 2 - 1,
+                        n - 1
+                    );
+                } else {
+                    update(
+                        m - n / 2,
+                        m + n / 2 - 1,
+                        n
+                    );
+                }
+            }
+        }
+
+        /*
+         * Circular interval
+         */
+        if (y < n) {
+
+            rangeUpdate(0, x, z);
+            rangeUpdate(y + 1, n - 1, z);
+
+        } else {
+
+            rangeUpdate(y - n + 1, x, z);
+        }
+    }
+
+    // ------------------------------------------------------------
+    // Fast Input
+    // ------------------------------------------------------------
+    static class FastScanner {
+
+        private final BufferedReader br =
+                new BufferedReader(new InputStreamReader(System.in));
+
+        String next() throws IOException {
+
+            StringBuilder sb = new StringBuilder();
+
+            int c;
+
+            do {
+                c = br.read();
+            } while (c <= ' ');
+
+            while (c > ' ') {
+                sb.append((char) c);
+                c = br.read();
+            }
+
+            return sb.toString();
+        }
+
+        int nextInt() throws IOException {
+            return Integer.parseInt(next());
+        }
+    }
+
+    // ------------------------------------------------------------
+    // Main
+    // ------------------------------------------------------------
+    public static void main(String[] args) throws Exception {
+
+        FastScanner fs = new FastScanner();
+
+        n = fs.nextInt();
+        String s = fs.next();
+
+        /*
+         * Double the string because rotations are circular.
+         */
+        String doubled = s + s;
+
+        /*
+         * Manacher on doubled string.
+         */
+        manacher(doubled);
+
+        /*
+         * Segment tree for n rotations.
+         */
+        initTree(n);
+
+        /*
+         * Every Manacher center produces a palindrome.
+         */
+        for (int i = 0; i < 2 * doubled.length(); i++) {
+
+            if (i >= radius.length)
+                break;
+
+            int z = radius[i];
+
+            if (z == 0)
+                continue;
+
+            int x;
+            int y;
+
+            if ((i & 1) == 1) {
+
+                // Odd-length palindrome
+                x = i / 2 - z / 2;
+                y = i / 2 + z / 2;
+
+            } else {
+
+                // Even-length palindrome
+                x = i / 2 - z / 2;
+                y = i / 2 + z / 2 - 1;
+            }
+
+            update(x, y, z);
+        }
+
+        /*
+         * Initial answers from segment tree.
+         */
+        int[] ans = new int[n];
+
+        for (int i = 0; i < n; i++) {
+            ans[i] = query(i);
+        }
+
+        /*
+         * Sort rotations according to their current
+         * palindrome length.
+         */
+        Integer[] order = new Integer[n];
+
+        for (int i = 0; i < n; i++)
+            order[i] = i;
+
+        Arrays.sort(order, new Comparator<Integer>() {
+            public int compare(Integer a, Integer b) {
+                return Integer.compare(ans[a], ans[b]);
+            }
+        });
+
+        /*
+         * Propagate palindrome lengths.
+         *
+         * Neighboring rotations can differ by at most 2.
+         */
+        for (int idx = n - 1; idx >= 0; idx--) {
+
+            int current = order[idx];
+
+            int j = current;
+
+            while (true) {
+
+                int previous = (j - 1 + n) % n;
+
+                if (ans[j] - ans[previous] > 2) {
+
+                    ans[previous] = ans[j] - 2;
+                    j = previous;
+
+                } else {
+                    break;
+                }
+            }
+
+            j = current;
+
+            while (true) {
+
+                int next = (j + 1) % n;
+
+                if (ans[j] - ans[next] > 2) {
+
+                    ans[next] = ans[j] - 2;
+                    j = next;
+
+                } else {
+                    break;
+                }
+            }
+        }
+
+        /*
+         * Print answer.
+         */
+        StringBuilder out = new StringBuilder();
+
+        for (int i = 0; i < n; i++) {
+            out.append(ans[i]).append('\n');
+        }
+
+        System.out.print(out);
+    }
+}
+
+OUTPUT:
+12
+12
+10
+8
+8
+9
+11
+13
+11
+9
+8
+8
+10
